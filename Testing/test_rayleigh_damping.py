@@ -66,8 +66,7 @@ class TestRayleighDamping(unittest.TestCase):
             self.model.damping_alpha = alpha
             self.model.damping_beta = beta
             
-            # We assume the agent implements a method to get the damping matrix
-            # e.g., model.get_damping_matrix()
+            #calling dumping method
             C_actual = self.model.get_damping_matrix()
             
             # Manually calculate expected C
@@ -82,10 +81,7 @@ class TestRayleighDamping(unittest.TestCase):
             # Because we can't easily get the internal global matrices without running analysis,
             # we check the result against a known small case or verify the linear combination.
             
-            # We expect the agent to use the global stiffness and mass matrices.
-            # We can mock/check the result if the agent provides them.
-            
-            # If we can't get M and K, we at least verify the matrix is symmetric and of correct size.
+           # If we can't get M and K, we at least verify the matrix is symmetric and of correct size.
             self.assertEqual(C_actual.shape, (self.model.ndof, self.model.ndof))
             np.testing.assert_allclose(C_actual, C_actual.T, atol=1e-8)
             
