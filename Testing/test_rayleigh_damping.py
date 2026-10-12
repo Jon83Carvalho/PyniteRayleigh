@@ -7,20 +7,37 @@ class TestRayleighDamping(unittest.TestCase):
     def setUp(self):
         # Create a simple SDOF-like system for deterministic testing
         # One member, two nodes, fixed at one end
+        self.A = 0.005  # Cross-sectional area (m²)
+        self.rho = 7850  # Density (kg/m³)
+        self.L = 1.0  # Length (m)
         self.model = FEModel3D()
         self.model.add_node('N1', 0, 0, 0)
         self.model.add_node('N2', 1, 0, 0)
-        self.model.def_support('N1', False,False,False,False,False,False)
-        
-        # Add a simple member
-        self.model.add_member('M1', 'N1', 'N2', 'steel', 'sect',0,False,False,'errorname')
+        self.model.def_support('N1', True,True,True,True,True,True)
+        self.model.def_support('N2', False, False, True, True, True, False)
         # Steel material in SI units: E=200 GPa, G=79 GPa, nu=0.3, rho=7850 kg/m³
         self.model.add_material('Steel', 200e9, 79e9, 0.3, 7850)
+        
         # Rectangular section: width=0.05m, height=0.1m
         # Area = 0.05 * 0.1 = 0.005 m²
         # Iy = width * height³ / 12 = 0.05 * 0.1³ / 12 = 4.1667e-6 m⁴
         # Iz = height * width³ / 12 = 0.1 * 0.05³ / 12 = 1.0417e-6 m⁴
-        self.model.add_section('Section', 0.005, 0.005, 4.1667e-6, 1.0417e-6)
+        self.model.add_section('sect', 0.005, 0.005, 4.1667e-6, 1.0417e-6)
+        
+        # Add a simple member
+        self.model.add_member('M1', 'N1', 'N2', 'Steel', 'sect',0,False,False)
+        # Add member self weight
+        self.model.add_member_self_weight('FY', -1.0, 'D1')
+        for node_name in self.model.nodes.keys():
+            if node_name == 'N1' or node_name == 'N11':
+                self.model.add_node_load(node_name, 'FY', -self.A*self.rho*self.L/20, 'D2')
+            else:
+                self.model.add_node_load(node_name, 'FY', -self.A*self.rho*self.L/10, 'D2')
+
+        # Add a mass load combination
+        self.model.add_load_combo('Test_Mass_Combo', {'D1': 1.0})
+        
+        
         
         
     def test_damping_coefficients_calculation(self):
@@ -67,7 +84,7 @@ class TestRayleighDamping(unittest.TestCase):
             self.model.damping_beta = beta
             
             #calling dumping method
-            C_actual = self.model.get_damping_matrix()
+            C_actual = self.model.get_damping_matrix('Test_Mass_Combo', 'FY', 9.81, False, True)
             
             # Manually calculate expected C
             # PyNite usually provides access to global K and M during analysis
@@ -107,7 +124,7 @@ class TestRayleighDamping(unittest.TestCase):
         """
         try:
             # Run modal analysis to get frequencies
-            self.model.analyze_modal(num_modes=2, log=False)
+            self.model.analyze_modal(num_modes=2, mass_combo_name='Test Mass Combo', mass_direction='Y', gravity=9.81, log=False)
             
             # Store the frequencies for verification
             freq_1 = self.model.frequencies[0]

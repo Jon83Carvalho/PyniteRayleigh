@@ -3040,9 +3040,27 @@ class FEModel3D:
         self.damping_alpha = coeffs[0]
         self.damping_beta = coeffs[1]
 
-    def get_damping_matrix(self):
-        """Constructs the global damping matrix C = alpha*M + beta*K"""
+    def get_damping_matrix(self, mass_combo_name=None, mass_direction='Y', gravity=1.0, log=False, sparse=True):
+        """
+        Constructs the global damping matrix C = alpha*M + beta*K
+        
+        :param mass_combo_name: Load combination name defining mass (via force loads). 
+                               If None, only material density-based mass is used. Defaults to None.
+        :type mass_combo_name: str, optional
+        :param mass_direction: Direction for load-to-mass conversion ('X', 'Y', or 'Z'). Defaults to 'Y'.
+        :type mass_direction: str, optional
+        :param gravity: The acceleration due to gravity. Defaults to 1.0.
+        :type gravity: float
+        :param log: Whether to print progress messages. Defaults to False.
+        :type log: bool, optional
+        :param sparse: Whether to return a sparse matrix. Defaults to True.
+        :type sparse: bool, optional
+        :return: The global damping matrix for the structure.
+        :rtype: scipy.sparse.coo_matrix or numpy.ndarray
+        """
+        # Stiffness matrix uses default combo (structural property, independent of mass)
         K = self.Ke(sparse=True)
-        M = self.M(sparse=True)
+        # Mass matrix uses mass_combo_name for force-to-mass conversion
+        M = self.M(mass_combo_name=mass_combo_name, mass_direction=mass_direction, gravity=gravity, log=log, sparse=sparse)
         
         return self.damping_alpha * M + self.damping_beta * K
