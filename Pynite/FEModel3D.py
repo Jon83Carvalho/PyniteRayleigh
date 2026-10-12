@@ -2999,9 +2999,41 @@ class FEModel3D:
 
 # %%
 
-    def calculate_rayleigh_coeffs(self, zeta_i, omega_i, zeta_j, omega_j):
-        """Calculates alpha and beta based on target damping ratios and frequencies"""
+    def calculate_rayleigh_coeffs(self, omega_i=None, omega_j=None, zeta_i=0.02, zeta_j=0.02):
+        """
+        Calculates alpha and beta based on target damping ratios and frequencies.
+        zeta is set as standard 2%.
+        
+        If omega_i and omega_j are not provided, the method will automatically use
+        the first two natural frequencies from modal analysis (Mode 1 and Mode 2).
+        
+        :param omega_i: First target angular frequency in rad/s. If None, uses Mode 1 frequency.
+        :type omega_i: float, optional
+        :param omega_j: Second target angular frequency in rad/s. If None, uses Mode 2 frequency.
+        :type omega_j: float, optional
+        :param zeta_i: Damping ratio for first frequency. Defaults to 0.02 (2%).
+        :type zeta_i: float, optional
+        :param zeta_j: Damping ratio for second frequency. Defaults to 0.02 (2%).
+        :type zeta_j: float, optional
+        
+        :raises AttributeError: If modal analysis has not been run and omega_i/omega_j are not provided.
+        """
         import numpy as np
+        
+        # If frequencies not provided, get them from modal analysis
+        if omega_i is None or omega_j is None:
+            if not hasattr(self, 'frequencies') or self.frequencies is None:
+                raise AttributeError(
+                    'Modal analysis has not been run. Please call model.analyze_modal() first, '
+                    'or provide omega_i and omega_j directly.'
+                )
+            
+            # Convert frequencies from Hz to angular frequencies (rad/s): ω = 2πf
+            if omega_i is None:
+                omega_i = 2 * np.pi * self.frequencies[0]
+            if omega_j is None:
+                omega_j = 2 * np.pi * self.frequencies[1]
+        
         A = np.array([[1/omega_i, omega_i], [1/omega_j, omega_j]])
         B = np.array([2*zeta_i, 2*zeta_j])
         coeffs = np.linalg.solve(A, B)
@@ -3010,12 +3042,7 @@ class FEModel3D:
 
     def get_damping_matrix(self):
         """Constructs the global damping matrix C = alpha*M + beta*K"""
-        import scipy.sparse as sp
+        K = self.Ke(sparse=True)
+        M = self.M(sparse=True)
         
-        K = getattr(self, 'K', None)
-        M = getattr(self, 'M', None)
-        
-        if K is None or M is None:
-            raise AttributeError("Global K and M matrices must be assembled before getting the damping matrix. Please run analyze().")
-            
         return self.damping_alpha * M + self.damping_beta * K

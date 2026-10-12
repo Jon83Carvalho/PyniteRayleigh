@@ -10,30 +10,30 @@ class TestRayleighDamping(unittest.TestCase):
         self.model = FEModel3D()
         self.model.add_node('N1', 0, 0, 0)
         self.model.add_node('N2', 1, 0, 0)
-        self.model.add_support('N1', 'FY')
-        self.model.add_support('N1', 'FZ')
-        self.model.add_support('N1', 'RX')
-        self.model.add_support('N1', 'RY')
-        self.model.add_support('N1', 'RZ')
+        self.model.def_support('N1', False,False,False,False,False,False)
         
         # Add a simple member
-        self.model.add_member('M1', 'N1', 'N2', E=200e9, G=77e9, Iy=1e-5, Iz=1e-5, J=2e-5, rho=7850)
+        self.model.add_member('M1', 'N1', 'N2', 'steel', 'sect',0,False,False,'errorname')
+        # Steel material in SI units: E=200 GPa, G=79 GPa, nu=0.3, rho=7850 kg/m³
+        self.model.add_material('Steel', 200e9, 79e9, 0.3, 7850)
+        # Rectangular section: width=0.05m, height=0.1m
+        # Area = 0.05 * 0.1 = 0.005 m²
+        # Iy = width * height³ / 12 = 0.05 * 0.1³ / 12 = 4.1667e-6 m⁴
+        # Iz = height * width³ / 12 = 0.1 * 0.05³ / 12 = 1.0417e-6 m⁴
+        self.model.add_section('Section', 0.005, 0.005, 4.1667e-6, 1.0417e-6)
+        
         
     def test_damping_coefficients_calculation(self):
         """
         T1: Verify that Rayleigh coefficients alpha and beta are calculated correctly
         given two target damping ratios and natural frequencies.
         """
-        zeta_i = 0.02
         omega_i = 10.0
-        zeta_j = 0.05
         omega_j = 50.0
+        zeta_i = 0.02
+        zeta_j = 0.05
         
         # The formula for alpha and beta:
-        # 1/zeta = (omega/alpha) + (beta/omega)
-        # This leads to a system of two equations.
-        # beta = 2 * zeta * omega_avg / (1 + (omega_i*omega_j / omega_avg^2)) ... actually simpler:
-        # alpha = zeta * omega_avg * 2 / (1 + (omega_i/omega_j)) ... no.
         # Standard formula:
         # [ 1/omega_i  omega_i ] [ alpha ] = [ 2*zeta_i ]
         # [ 1/omega_j  omega_j ] [ beta  ] = [ 2*zeta_j ]
@@ -43,10 +43,9 @@ class TestRayleighDamping(unittest.TestCase):
         expected_coeffs = np.linalg.solve(A, B)
         expected_alpha, expected_beta = expected_coeffs[0], expected_coeffs[1]
         
-        # We assume the agent implements a method like model.calculate_rayleigh_coeffs(zeta_i, omega_i, zeta_j, omega_j)
+        # Call with explicit omega values (new parameter order: omega_i, omega_j, zeta_i, zeta_j)
         try:
-            # This call should fail in the base commit
-            self.model.calculate_rayleigh_coeffs(zeta_i, omega_i, zeta_j, omega_j)
+            self.model.calculate_rayleigh_coeffs(omega_i, omega_j, zeta_i, zeta_j)
             actual_alpha = self.model.damping_alpha
             actual_beta = self.model.damping_beta
             
@@ -104,6 +103,43 @@ class TestRayleighDamping(unittest.TestCase):
             self.assertTrue(np.all(C == 0))
         except AttributeError:
             self.fail("Damping matrix assembly method not implemented.")
+
+    def test_automatic_frequency_from_modal(self):
+        """
+        T5: Verify that calculate_rayleigh_coeffs automatically uses Mode 1 and Mode 2
+        frequencies when omega_i and omega_j are not provided.
+        """
+        try:
+            # Run modal analysis to get frequencies
+            self.model.analyze_modal(num_modes=2, log=False)
+            
+            # Store the frequencies for verification
+            freq_1 = self.model.frequencies[0]
+            freq_2 = self.model.frequencies[1]
+            
+            # Calculate coefficients without providing omega (should use modal frequencies)
+            self.model.calculate_rayleigh_coeffs(zeta_i=0.02, zeta_j=0.02)
+            
+            # Verify coefficients were set
+            self.assertIsNotNone(self.model.damping_alpha)
+            self.assertIsNotNone(self.model.damping_beta)
+            
+            # Manually calculate expected coefficients using the modal frequencies
+            omega_i = 2 * np.pi * freq_1
+            omega_j = 2 * np.pi * freq_2
+            zeta_i = 0.02
+            zeta_j = 0.02
+            
+            A = np.array([[1/omega_i, omega_i], [1/omega_j, omega_j]])
+            B = np.array([2*zeta_i, 2*zeta_j])
+            expected_coeffs = np.linalg.solve(A, B)
+            expected_alpha, expected_beta = expected_coeffs[0], expected_coeffs[1]
+            
+            self.assertAlmostEqual(self.model.damping_alpha, expected_alpha, places=5)
+            self.assertAlmostEqual(self.model.damping_beta, expected_beta, places=5)
+            
+        except AttributeError as e:
+            self.fail(f"Modal analysis or Rayleigh coefficient calculation failed: {str(e)}")
 
 if __name__ == '__main__':
     unittest.main()
