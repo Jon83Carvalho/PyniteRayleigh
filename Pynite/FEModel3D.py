@@ -3059,9 +3059,8 @@ class FEModel3D:
         :rtype: scipy.sparse.coo_matrix or numpy.ndarray
         """
         # Stiffness matrix uses default combo (structural property, independent of mass)
-        self.analyze_modal(num_modes=2, mass_combo_name=mass_combo_name, mass_direction=mass_direction, gravity=gravity, log=log)
-        K = Ke_global
+        K = self.Ke(combo_name=mass_combo_name, sparse=True)
         # Mass matrix uses mass_combo_name for force-to-mass conversion
-        M = M_global
+        M = self.M(mass_combo_name=mass_combo_name, mass_direction=mass_direction, gravity=gravity, log=log, sparse=sparse)
         
         return self.damping_alpha * M + self.damping_beta * K
