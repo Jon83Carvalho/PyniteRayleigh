@@ -1,3 +1,6 @@
+import sys
+sys.path.insert(0, '/home/ubuntu/CodeChallenges/pynitechallenge/PyniteRayleigh')
+
 import unittest
 import numpy as np
 from Pynite import FEModel3D
