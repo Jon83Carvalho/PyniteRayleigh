@@ -40,6 +40,9 @@ class TestRayleighDamping(unittest.TestCase):
         # Add a structural load combination for stiffness matrix
         self.model.add_load_combo('Combo 1', {'D1': 1.0})
         
+        # Activate member for the structural combo
+        self.model.members['M1'].active['Combo 1'] = True
+        
         
         
         
