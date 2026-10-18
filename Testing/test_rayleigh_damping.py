@@ -124,7 +124,7 @@ class TestRayleighDamping(unittest.TestCase):
         """
         try:
             # Run modal analysis to get frequencies
-            self.model.analyze_modal(num_modes=2, mass_combo_name='Test Mass Combo', mass_direction='Y', gravity=9.81, log=False)
+            self.model.analyze_modal(num_modes=2, mass_combo_name='Test_Mass_Combo', mass_direction='Y', gravity=9.81, log=False)
             
             # Store the frequencies for verification
             freq_1 = self.model.frequencies[0]
