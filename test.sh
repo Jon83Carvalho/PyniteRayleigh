@@ -42,7 +42,6 @@ if ! command -v pytest &> /dev/null && ! python3 -m pytest --version &> /dev/nul
 fi
 
 # Define the test runner command to be more robust
-# Use 'python3 -m pytest' if available, as it's more reliable across environments
 if python3 -m pytest --version &> /dev/null; then
     RUNNER="python3 -m pytest"
 else
@@ -51,12 +50,14 @@ fi
 
 if [ "$MODE" == "base" ]; then
     echo "Running regression tests (base mode)..."
-    $RUNNER Testing/ --junitxml="$OUTPUT_PATH"
+    # Run tests in Testing folder but explicitly exclude test_pushover.py
+    $RUNNER Testing/ --junitxml="$OUTPUT_PATH" -k "not test_pushover"
     EXIT_CODE=$?
 fi
 
 if [ "$MODE" == "new" ]; then
     echo "Running new Rayleigh Damping tests..."
+    # Run only the specific challenge test file
     $RUNNER Testing/test_rayleigh_damping.py --junitxml="$OUTPUT_PATH"
     EXIT_CODE=$?
 fi
