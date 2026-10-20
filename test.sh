@@ -10,8 +10,9 @@
 #   new   run the new challenge tests; these fail before the solution
 #         and pass after it.
 
-# Set default output path
-OUTPUT_PATH="results.xml"
+# Set matplotlib to a non-interactive backend to avoid tkinter requirements in headless environments
+export MPLBACKEND=Agg
+
 
 # Parse arguments
 MODE=""
