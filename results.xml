@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="1" failures="0" skipped="0" tests="1" time="3.107" timestamp="2026-10-19T22:30:38.079268-03:00" hostname="ubuntu-VirtualBox"><testcase classname="" name="Testing.test_pushover" time="0.000"><error message="collection failure">ImportError while importing test module '/home/ubuntu/CodeChallenges/pynitechallenge/PyniteRayleigh/Testing/test_pushover.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Testing/test_pushover.py:4: in &lt;module&gt;
+    matplotlib.use('TkAgg')
+../../venvs/pynite/lib/python3.12/site-packages/matplotlib/__init__.py:1277: in use
+    plt.switch_backend(name)
+../../venvs/pynite/lib/python3.12/site-packages/matplotlib/pyplot.py:445: in switch_backend
+    module = backend_registry.load_backend_module(newbackend)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../venvs/pynite/lib/python3.12/site-packages/matplotlib/backends/registry.py:317: in load_backend_module
+    return importlib.import_module(module_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../venvs/pynite/lib/python3.12/site-packages/matplotlib/backends/backend_tkagg.py:1: in &lt;module&gt;
+    from . import _backend_tk
+../../venvs/pynite/lib/python3.12/site-packages/matplotlib/backends/_backend_tk.py:9: in &lt;module&gt;
+    import tkinter as tk
+E   ModuleNotFoundError: No module named 'tkinter'</error></testcase></testsuite></testsuites>
