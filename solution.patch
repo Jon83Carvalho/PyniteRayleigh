@@ -1,17 +1,30 @@
 diff --git a/Pynite/FEModel3D.py b/Pynite/FEModel3D.py
-index 2d6fc65..46bc30f 100644
+index 3bcacbd..46bc30f 100644
 --- a/Pynite/FEModel3D.py
 +++ b/Pynite/FEModel3D.py
-@@ -40,6 +40,8 @@ class FEModel3D:
+
+@@ -41,19 +39,21 @@ class FEModel3D():
+         # the data types they store, and then those types will be removed. This will give us the
          # ability to get type-based hints when using the dictionaries.
  
-         self.nodes: dict[str, Node3D] = {}             # A dictionary of the model's nodes
+        self.nodes: Dict[str, Node3D] = {}             # A dictionary of the model's nodes
 +        self.damping_alpha = 0.0
 +        self.damping_beta = 0.0
-         self.materials: dict[str, Material] = {}       # A dictionary of the model's materials
-         self.sections: dict[str, Section] = {}         # A dictonary of the model's cross-sections
-         self.springs: dict[str, Spring3D] = {}         # A dictionary of the model's springs
-@@ -2996,3 +2998,69 @@ class FEModel3D:
+        self.materials: Dict[str, Material] = {}       # A dictionary of the model's materials
+        self.sections: Dict[str, Section] = {}         # A dictonary of the model's cross-sections
+        self.springs: Dict[str, Spring3D] = {}         # A dictionary of the model's springs
+        self.members: dict[str, PhysMember] = {}       # A dictionary of the model's physical members
+        self.quads: dict[str, Quad3D] = {}             # A dictionary of the model's quadiralterals
+        self.plates: dict[str, Plate3D] = {}           # A dictionary of the model's rectangular plates
+        self.meshes: dict[str, Mesh] = {}              # A dictionary of the model's meshes
+        self.shear_walls: dict[str, ShearWall] = {}    # A dictionary of the model's shear walls
+        self.mats: dict[str, MatFoundation] = {}       # A dictionary of the model's mat foundations
+        self.load_combos: dict[str, LoadCombo] = {}    # A dictionary of the model's load combinations
+        self._D: dict[str, NDArray[float64]] = {}      # A dictionary of the model's nodal displacements by load combination
+        self._pushover_traces: dict[str, dict[str, list]] = {}
+        
+        self.solution: str | None = None  # Indicates the solution type for the latest run of the model
+@@ -2981,3 +2998,69 @@ class FEModel3D():
          return orphans
  
  # %%
