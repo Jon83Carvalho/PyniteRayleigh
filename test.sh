@@ -53,6 +53,7 @@ if [ "$MODE" == "base" ]; then
     
     # Explicitly list all tests except test_pushover.py and T Matrix Test.py (which might also use GUI/Tk)
     TESTS=(
+        "Testing/test_2D_frames.py"
         "Testing/test_AISC_PDelta_benchmarks.py"
         "Testing/test_TC_analysis.py"
         "Testing/test_Visualization.py"
