@@ -2984,7 +2984,7 @@ class FEModel3D():
 
 # %%
 
-def calculate_rayleigh_coeffs(self, omega_i=None, omega_j=None, zeta_i=0.02, zeta_j=0.02):
+    def calculate_rayleigh_coeffs(self, omega_i=None, omega_j=None, zeta_i=0.02, zeta_j=0.02):
         """
         Calculates alpha and beta based on target damping ratios and frequencies.
         zeta is set as standard 2%.
