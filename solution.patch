@@ -1,5 +1,5 @@
 diff --git a/Pynite/FEModel3D.py b/Pynite/FEModel3D.py
-index 3bcacbd..fb2acae 100644
+index 3bcacbd..9fa6596 100644
 --- a/Pynite/FEModel3D.py
 +++ b/Pynite/FEModel3D.py
 @@ -42,6 +42,8 @@ class FEModel3D():
@@ -16,7 +16,7 @@ index 3bcacbd..fb2acae 100644
  
  # %%
 +
-+def calculate_rayleigh_coeffs(self, omega_i=None, omega_j=None, zeta_i=0.02, zeta_j=0.02):
++    def calculate_rayleigh_coeffs(self, omega_i=None, omega_j=None, zeta_i=0.02, zeta_j=0.02):
 +        """
 +        Calculates alpha and beta based on target damping ratios and frequencies.
 +        zeta is set as standard 2%.
