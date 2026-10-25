@@ -178,7 +178,7 @@ index 0000000..4a12c1c
 +if __name__ == '__main__':
 +    unittest.main()
 diff --git a/requirements.txt b/requirements.txt
-new file mode 100755
+new file mode 100644
 index 0000000..40841b6
 --- /dev/null
 +++ b/requirements.txt
@@ -191,7 +191,7 @@ index 0000000..40841b6
 +PyYAML==6.0.3
 +matplotlib==3.11.2
 diff --git a/test.sh b/test.sh
-new file mode 100644
+new file mode 100755
 index 0000000..88c2ed9
 --- /dev/null
 +++ b/test.sh
