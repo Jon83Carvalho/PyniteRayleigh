@@ -7,7 +7,6 @@ COPY . .
 
 # Install dependencies required to run the PyNite tests
 # We explicitly install pytest to support the JUnit XML output in test.sh
-RUN pip -m pip install --no-cache-dir pip==24.0
 RUN pip install -r requirements.txt 
 
 # Default to bash as requested in the base guide
