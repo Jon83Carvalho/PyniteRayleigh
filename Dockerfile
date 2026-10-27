@@ -15,7 +15,10 @@ RUN pip install --no-cache-dir \
         pillow==12.3.0 \
         PyYAML==6.0.3 \
         matplotlib==3.11.2 \
-        prettytable==3.10.0
+        prettytable==3.10.0 \
+        ipython==8.22.0 \
+        vtk==9.3.0 \
+        pyvista==0.43.5
 
 # Default to bash as requested in the base guide
 CMD ["/bin/bash"]
