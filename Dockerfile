@@ -2,6 +2,8 @@ FROM public.ecr.aws/d3j8x8q7/olympus-base-python:latest
 
 WORKDIR /app
 
+ENV PYVISTA_OFF_SCREEN=TRUE
+
 # Copy the entire repository contents into the container
 COPY . .
 
@@ -18,7 +20,10 @@ RUN pip install --no-cache-dir \
         prettytable==3.10.0 \
         ipython==8.22.0 \
         vtk==9.3.0 \
-        pyvista==0.43.5
+        pyvista==0.43.5 \
+        trame-vtk==3.0.0 \
+        ipywidgets==8.1.2 \
+        PyniteFEA[all]
 
 # Default to bash as requested in the base guide
 CMD ["/bin/bash"]
