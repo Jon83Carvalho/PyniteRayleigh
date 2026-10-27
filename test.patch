@@ -1,4 +1,4 @@
-diff --git a/Testing/test_rayleigh_damping.py b/Testing/test_rayleigh_damping.py
+diff --git a/Testing/test_rayleigh_damping.py b/Testing/test_rayleigh_damping_aBx31.py
 new file mode 100644
 index 0000000..4a12c1c
 --- /dev/null
