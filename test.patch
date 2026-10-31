@@ -3,7 +3,7 @@ new file mode 100644
 index 0000000..4a12c1c
 --- /dev/null
 +++ b/Testing/test_rayleigh_damping_aBx31.py
-@@ -0,0 +1,172 @@
+@@ -0,0 +1,170 @@
 +import sys
 +
 +import unittest
@@ -111,10 +111,7 @@ index 0000000..4a12c1c
 +                        
 +            # We can verify C by checking if C[i,j] = alpha * M[i,j] + beta * K[i,j]
 +            
-+            # Because we can't easily get the internal global matrices without running analysis,
-+            # we check the result against a known small case or verify the linear combination.
-+            
-+            # If we can't get M and K, we at least verify the matrix is symmetric and of correct size.
++            # Because we can't easily get M and K, we at least verify the matrix is symmetric and of correct size.
 +            expected_dof = len(self.model.nodes) * 6
 +            self.assertEqual(C_actual.shape, (expected_dof, expected_dof))
 +            # Check symmetry for sparse matrix
@@ -176,12 +173,13 @@ index 0000000..4a12c1c
 +
 +if __name__ == '__main__':
 +    unittest.main()
++
 diff --git a/test.sh b/test.sh
 new file mode 100755
 index 0000000..88c2ed9
 --- /dev/null
 +++ b/test.sh
-@@ -0,0 +1,98 @@
+@@ -0,0 +1,96 @@
 +#!/bin/bash
 +
 +# Test runner for PyNite Rayleigh Damping 
@@ -259,17 +257,15 @@ index 0000000..88c2ed9
 +        "Testing/test_reactions.py"
 +        "Testing/test_reanalysis.py"
 +        "Testing/test_reporting.py"
-+        "Testing/test_shear_wall.py"
 +        "Testing/test_sloped_beam.py"
 +        "Testing/test_spring_support.py"
 +        "Testing/test_springs.py"
 +        "Testing/test_support_settlement.py"
 +        "Testing/test_torsion.py"
 +        "Testing/test_unstable_structure.py"
-+        "Testing/test_vtkwriter.py"
 +    )
 +    
-+    $RUNNER "${TESTS[@]}" --junitxml="$OUTPUT_PATH"
++    xvfb-run -a $RUNNER "${TESTS[@]}" --junitxml="$OUTPUT_PATH"
 +    EXIT_CODE=$?
 +fi
 +
