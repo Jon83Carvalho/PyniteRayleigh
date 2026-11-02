@@ -3,7 +3,7 @@ new file mode 100644
 index 0000000..4a12c1c
 --- /dev/null
 +++ b/Testing/test_rayleigh_damping_aBx31.py
-@@ -0,0 +1,154 @@
+@@ -0,0 +1,193 @@
 +import sys
 +
 +import unittest
@@ -96,12 +96,24 @@ index 0000000..4a12c1c
 +            self.model.damping_alpha = alpha
 +            self.model.damping_beta = beta
 +            
++            # Get stiffness and mass matrices using public methods
++            K = self.model.Ke(combo_name='Combo 1', check_stability=False, sparse=True)
++            M = self.model.M(mass_combo_name='Test_Mass_Combo', mass_direction='Y', gravity=9.81, log=False, sparse=True)
++            
 +            #calling dumping method
 +            C_actual = self.model.get_damping_matrix('Test_Mass_Combo', 'FY', 9.81, False, True)
 +            
++            # Verify C = alpha*M + beta*K numerically
++            C_expected = alpha * M + beta * K
++            C_actual_dense = C_actual.toarray() if hasattr(C_actual, 'toarray') else C_actual
++            C_expected_dense = C_expected.toarray() if hasattr(C_expected, 'toarray') else C_expected
++            np.testing.assert_allclose(C_actual_dense, C_expected_dense, atol=1e-8)
++            
 +            # Verify the damping matrix is symmetric (property of Rayleigh damping)
-+            C_dense = C_actual.toarray() if hasattr(C_actual, 'toarray') else C_actual
-+            np.testing.assert_allclose(C_dense, C_dense.T, atol=1e-8)
++            np.testing.assert_allclose(C_actual_dense, C_actual_dense.T, atol=1e-8)
++            
++            # Verify non-zero content when alpha/beta are non-zero
++            self.assertGreater(C_actual.nnz, 0)
 +            
 +        except AttributeError:
 +            self.fail("Damping matrix assembly method not implemented.")
@@ -116,6 +128,28 @@ index 0000000..4a12c1c
 +            C = self.model.get_damping_matrix(mass_combo_name='Test_Mass_Combo', mass_direction='Y', gravity=9.81, log=False, sparse=True)
 +            # Check if all values are zero for sparse matrix
 +            self.assertEqual(C.nnz, 0)
++        except AttributeError:
++            self.fail("Damping matrix assembly method not implemented.")
++
++    def test_dense_return_type(self):
++        """
++        T5: Verify that sparse=False returns a dense NumPy array.
++        """
++        alpha = 0.5
++        beta = 0.1
++        
++        try:
++            self.model.damping_alpha = alpha
++            self.model.damping_beta = beta
++            
++            # Request dense output
++            C_dense = self.model.get_damping_matrix('Test_Mass_Combo', 'FY', 9.81, False, False)
++            
++            # Verify it's a NumPy array, not a sparse matrix
++            self.assertIsInstance(C_dense, np.ndarray)
++            # Verify it's not a sparse matrix (no toarray method)
++            self.assertFalse(hasattr(C_dense, 'toarray'))
++            
 +        except AttributeError:
 +            self.fail("Damping matrix assembly method not implemented.")
 +
