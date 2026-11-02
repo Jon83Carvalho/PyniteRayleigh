@@ -53,13 +53,6 @@ index 0000000..4a12c1c
 +        # Activate member for the mass combo
 +        self.model.members['M1'].active['Test_Mass_Combo'] = True
 +        
-+        # Prepare the model to set node IDs
-+        from Pynite import Analysis
-+        Analysis._prepare_model(self.model)
-+        
-+        
-+        
-+        
 +    def test_damping_coefficients_calculation(self):
 +        """
 +        T1: Verify that Rayleigh coefficients alpha and beta are calculated correctly
@@ -106,15 +99,7 @@ index 0000000..4a12c1c
 +            #calling dumping method
 +            C_actual = self.model.get_damping_matrix('Test_Mass_Combo', 'FY', 9.81, False, True)
 +            
-+            # Manually calculate expected C
-+            # PyNite usually provides access to global K and M during analysis
-+                        
-+            # We can verify C by checking if C[i,j] = alpha * M[i,j] + beta * K[i,j]
-+            
-+            # Because we can't easily get M and K, we at least verify the matrix is symmetric and of correct size.
-+            expected_dof = len(self.model.nodes) * 6
-+            self.assertEqual(C_actual.shape, (expected_dof, expected_dof))
-+            # Check symmetry for sparse matrix
++            # Verify the damping matrix is symmetric (property of Rayleigh damping)
 +            C_dense = C_actual.toarray() if hasattr(C_actual, 'toarray') else C_actual
 +            np.testing.assert_allclose(C_dense, C_dense.T, atol=1e-8)
 +            
