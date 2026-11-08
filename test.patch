@@ -3,7 +3,7 @@ new file mode 100644
 index 0000000..4a12c1c
 --- /dev/null
 +++ b/Testing/test_rayleigh_damping_aBx31.py
-@@ -0,0 +1,242 @@
+@@ -0,0 +1,245 @@
 +import sys
 +
 +import unittest
@@ -50,6 +50,10 @@ index 0000000..4a12c1c
 +        self.model.members['M1'].active['Combo 1'] = True
 +        # Activate member for the mass combo
 +        self.model.members['M1'].active['Test_Mass_Combo'] = True
++
++        # Prepare the model by running a static analysis to initialize node IDs
++        # This is a public method that sets up the internal state needed by Ke() and M()
++        self.model.analyze(check_stability=False)
 +
 +    def test_damping_coefficients_calculation(self):
 +        """
