@@ -4,26 +4,137 @@ index 3bcacbd..9fa6596 100644
 +++ b/Pynite/FEModel3D.py
 @@ -42,6 +42,8 @@ class FEModel3D():
          # ability to get type-based hints when using the dictionaries.
- 
+
          self.nodes: Dict[str, Node3D] = {}             # A dictionary of the model's nodes
 +        self.damping_alpha = 0.0
 +        self.damping_beta = 0.0
          self.materials: Dict[str, Material] = {}       # A dictionary of the model's materials
          self.sections: Dict[str, Section] = {}         # A dictonary of the model's cross-sections
          self.springs: Dict[str, Spring3D] = {}         # A dictionary of the model's springs
+@@ -2474,7 +2476,9 @@ class FEModel3D():
+     def analyze_modal(
+         self,
+         num_modes: int = 12,
+         mass_combo_name: str = 'Combo 1',
+         mass_direction: str = 'Y',
+         gravity: float = 1.0,
+         log: bool = False,
+-        check_stability: bool = True
++        check_stability: bool = True,
++        damped: bool = False,
++        damping_modes: tuple = (1, 2),
++        damping_ratios: tuple = (0.02, 0.02)
+ ):
+     if log:
+         print('+------------------+')
+         print('| Analyzing: Modal |')
+         print('+------------------+')
+
+     Analysis._prepare_model(self, num_modes)
+     D1_indices, D2_indices, D2 = Analysis._partition_D(self)
+
+     if log:
+         print('- Assembling global stiffness matrix')
+
+     Ke_global = self.Ke(mass_combo_name, log, check_stability, sparse=True).tocsr()
+     K11, K12, K21, K22 = Analysis._partition(self, Ke_global, D1_indices, D2_indices)
+
+     if log:
+         print('- Assembling global mass matrix')
+
+     M_global = self.M(mass_combo_name, mass_direction, gravity, log, sparse=True).tocsr()
+     M11, M12, M21, M22 = Analysis._partition(self, M_global, D1_indices, D2_indices)
+
+     if M11.nnz == 0:
+         raise Exception('No mass terms found. Ensure materials have density or provide mass_combo_name.')
+
+     if log:
+         print('- Solving eigenvalue problem')
+
+     try:
+         eigenvalues, eigenvectors = sp.sparse.linalg.eigsh(A=K11, k=num_modes, M=M11, sigma=0.0, which='LM')
+     except sp.linalg.LinAlgError as e:
+         raise Exception(f'Eigenvalue solution failed: {str(e)}. Check matrix conditioning.')
+
+-    # Calculate frequencies in Hz from eigenvalues (λ = ω²)
+-    frequencies = np.sqrt(eigenvalues) / (2 * np.pi)
++    # Calculate undamped angular frequencies (rad/s) and natural frequencies (Hz)
++    omegas = np.sqrt(eigenvalues)
++    undamped_frequencies = omegas / (2 * np.pi)
++    self.undamped_frequencies = undamped_frequencies
++    self.frequencies = undamped_frequencies
++
++    # Apply Rayleigh Damping if activated
++    if damped:
++        if log:
++            print('- Calculating Rayleigh damping and damped frequencies')
++
++        m1, m2 = damping_modes
++        if m1 < 1 or m2 < 1 or m1 > num_modes or m2 > num_modes or m1 == m2:
++            raise ValueError(f'`damping_modes` must contain two distinct mode numbers between 1 and {num_modes}.')
++
++        # Call your existing method to compute self.damping_alpha and self.damping_beta
++        self.calculate_rayleigh_coeffs(
++            omega_i=omegas[m1 - 1],
++            omega_j=omegas[m2 - 1],
++            zeta_i=damping_ratios[0],
++            zeta_j=damping_ratios[1]
++        )
++
++        # Build partitioned damping matrix directly from existing M11 and K11
++        self.C11 = self.damping_alpha * M11 + self.damping_beta * K11
++
++        # Compute modal damping ratios and damped natural frequencies
++        modal_damping_ratios = 0.5 * (self.damping_alpha / omegas + self.damping_beta * omegas)
++        damping_factors = np.where(
++            modal_damping_ratios < 1.0,
++            np.sqrt(np.maximum(0.0, 1.0 - modal_damping_ratios**2)),
++            0.0
++        )
++        frequencies = undamped_frequencies * damping_factors
++        self.damping_ratios = modal_damping_ratios
++    else:
++        frequencies = undamped_frequencies
+
+     if log:
+         print('- Processing mode shapes')
+
+     for i in range(len(frequencies)):
+         mode_combo = self.load_combos[f'Mode {i + 1}']
+         D1_mode = eigenvectors[:, i].reshape(-1, 1)
+         Analysis._store_displacements(self, D1_mode, D2, D1_indices, D2_indices, mode_combo)
+
+     self.frequencies = frequencies
+     self.solution = 'Modal'
+
+     if log:
+         print(f'- Found {len(frequencies)} modes')
+-        for i, freq in enumerate(frequencies):
+-            print(f'  Mode {i + 1}: {freq:.3f} Hz')
++        if damped:
++            print(f'  Rayleigh Coefficients: alpha = {self.damping_alpha:.4f}, beta = {self.damping_beta:.6f}')
++            for i, (f_u, f_d, z) in enumerate(zip(undamped_frequencies, frequencies, modal_damping_ratios)):
++                print(f'  Mode {i + 1}: Undamped = {f_u:.3f} Hz | Damped = {f_d:.3f} Hz (zeta = {z*100:.2f}%)')
++        else:
++            for i, freq in enumerate(frequencies):
++                print(f'  Mode {i + 1}: {freq:.3f} Hz')
+         print('- Modal analysis complete')
++
++    return frequencies
+
 @@ -2981,3 +2983,69 @@ class FEModel3D():
          return orphans
- 
- # %%
-+
+
+# %%
+
 +    def calculate_rayleigh_coeffs(self, omega_i=None, omega_j=None, zeta_i=0.02, zeta_j=0.02):
 +        """
 +        Calculates alpha and beta based on target damping ratios and frequencies.
 +        zeta is set as standard 2%.
-+        
++
 +        If omega_i and omega_j are not provided, the method will automatically use
 +        the first two natural frequencies from modal analysis (Mode 1 and Mode 2).
-+        
++
 +        :param omega_i: First target angular frequency in rad/s. If None, uses Mode 1 frequency.
 +        :type omega_i: float, optional
 +        :param omega_j: Second target angular frequency in rad/s. If None, uses Mode 2 frequency.
@@ -32,11 +143,11 @@ index 3bcacbd..9fa6596 100644
 +        :type zeta_i: float, optional
 +        :param zeta_j: Damping ratio for second frequency. Defaults to 0.02 (2%).
 +        :type zeta_j: float, optional
-+        
++
 +        :raises AttributeError: If modal analysis has not been run and omega_i/omega_j are not provided.
 +        """
 +        import numpy as np
-+        
++
 +        # If frequencies not provided, get them from modal analysis
 +        if omega_i is None or omega_j is None:
 +            if not hasattr(self, 'frequencies') or self.frequencies is None:
@@ -44,13 +155,13 @@ index 3bcacbd..9fa6596 100644
 +                    'Modal analysis has not been run. Please call model.analyze_modal() first, '
 +                    'or provide omega_i and omega_j directly.'
 +                )
-+            
++
 +            # Convert frequencies from Hz to angular frequencies (rad/s): ω = 2πf
 +            if omega_i is None:
 +                omega_i = 2 * np.pi * self.frequencies[0]
 +            if omega_j is None:
 +                omega_j = 2 * np.pi * self.frequencies[1]
-+        
++
 +        A = np.array([[1/omega_i, omega_i], [1/omega_j, omega_j]])
 +        B = np.array([2*zeta_i, 2*zeta_j])
 +        coeffs = np.linalg.solve(A, B)
@@ -60,8 +171,8 @@ index 3bcacbd..9fa6596 100644
 +    def get_damping_matrix(self, mass_combo_name=None, mass_direction='Y', gravity=1.0, log=False, sparse=True):
 +        """
 +        Constructs the global damping matrix C = alpha*M + beta*K
-+        
-+        :param mass_combo_name: Load combination name defining mass (via force loads). 
++
++        :param mass_combo_name: Load combination name defining mass (via force loads).
 +                               If None, only material density-based mass is used. Defaults to None.
 +        :type mass_combo_name: str, optional
 +        :param mass_direction: Direction for load-to-mass conversion ('X', 'Y', or 'Z'). Defaults to 'Y'.
@@ -79,6 +190,6 @@ index 3bcacbd..9fa6596 100644
 +        K = self.Ke(combo_name='Combo 1', check_stability=False, sparse=True)
 +        # Mass matrix uses mass_combo_name for force-to-mass conversion
 +        M = self.M(mass_combo_name=mass_combo_name, mass_direction=mass_direction, gravity=gravity, log=log, sparse=sparse)
-+        
++
 +        return self.damping_alpha * M + self.damping_beta * K
 \ No newline at end of file

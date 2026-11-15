@@ -3,7 +3,7 @@ new file mode 100644
 index 0000000..4a12c1c
 --- /dev/null
 +++ b/Testing/test_rayleigh_damping_aBx31.py
-@@ -0,0 +1,246 @@
+@@ -0,0 +1,295 @@
 +import sys
 +
 +import unittest
@@ -247,7 +247,56 @@ index 0000000..4a12c1c
 +
 +        except AttributeError as e:
 +            self.fail(f"Modal analysis or Rayleigh coefficient calculation failed: {str(e)}")
-+
+
++    def test_damped_modal_analysis(self):
++        """
++        Verify that analyze_modal with damped=True correctly computes
++        Rayleigh damping coefficients and damped natural frequencies.
++        """
++        try:
++            # Run damped modal analysis
++            damping_modes = (1, 2)
++            damping_ratios = (0.02, 0.02)
+
++            frequencies = self.model.analyze_modal(
++                num_modes=2,
++                mass_combo_name='Test_Mass_Combo',
++                mass_direction='Y',
++                gravity=9.81,
++                log=False,
++                damped=True,
++                damping_modes=damping_modes,
++                damping_ratios=damping_ratios
++            )
+
++            # Verify damping coefficients were set
++            self.assertIsNotNone(self.model.damping_alpha)
++            self.assertIsNotNone(self.model.damping_beta)
+
++            # Verify damping ratios were computed
++            self.assertTrue(hasattr(self.model, 'damping_ratios'))
++            self.assertEqual(len(self.model.damping_ratios), 2)
+
++            # Verify undamped frequencies are stored
++            self.assertTrue(hasattr(self.model, 'undamped_frequencies'))
++            self.assertEqual(len(self.model.undamped_frequencies), 2)
+
++            # Verify damped frequencies are lower than undamped (for underdamped case)
++            for i in range(len(frequencies)):
++                self.assertLess(frequencies[i], self.model.undamped_frequencies[i])
+
++            # Verify returned frequencies match the damped frequencies
++            np.testing.assert_allclose(frequencies, self.model.frequencies, atol=1e-8)
+
++            # Verify damping ratios are within reasonable range (should be close to target for modes 1 and 2)
++            self.assertLess(self.model.damping_ratios[0], 1.0)  # Underdamped
++            self.assertLess(self.model.damping_ratios[1], 1.0)  # Underdamped
+
++        except AttributeError as e:
++            self.fail(f"Damped modal analysis failed: {str(e)}")
++        except TypeError as e:
++            self.fail(f"Damped modal analysis parameters not supported: {str(e)}")
+
 +if __name__ == '__main__':
 +    unittest.main()
 +
