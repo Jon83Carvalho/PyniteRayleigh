@@ -1,0 +1,110 @@
+diff
+ def analyze_modal(
+     self,
+     num_modes: int = 12,
+     mass_combo_name: str = 'Combo 1',
+     mass_direction: str = 'Y',
+     gravity: float = 1.0,
+     log: bool = False,
+-    check_stability: bool = True
++    check_stability: bool = True,
++    damped: bool = False,
++    damping_modes: tuple = (1, 2),
++    damping_ratios: tuple = (0.02, 0.02)
+ ):
+     if log:
+         print('+------------------+')
+         print('| Analyzing: Modal |')
+         print('+------------------+')
+ 
+     Analysis._prepare_model(self, num_modes)
+     D1_indices, D2_indices, D2 = Analysis._partition_D(self)
+ 
+     if log:
+         print('- Assembling global stiffness matrix')
+ 
+     Ke_global = self.Ke(mass_combo_name, log, check_stability, sparse=True).tocsr()
+     K11, K12, K21, K22 = Analysis._partition(self, Ke_global, D1_indices, D2_indices)
+ 
+     if log:
+         print('- Assembling global mass matrix')
+ 
+     M_global = self.M(mass_combo_name, mass_direction, gravity, log, sparse=True).tocsr()
+     M11, M12, M21, M22 = Analysis._partition(self, M_global, D1_indices, D2_indices)
+ 
+     if M11.nnz == 0:
+         raise Exception('No mass terms found. Ensure materials have density or provide mass_combo_name.')
+ 
+     if log:
+         print('- Solving eigenvalue problem')
+ 
+     try:
+         eigenvalues, eigenvectors = sp.sparse.linalg.eigsh(A=K11, k=num_modes, M=M11, sigma=0.0, which='LM')
+     except sp.linalg.LinAlgError as e:
+         raise Exception(f'Eigenvalue solution failed: {str(e)}. Check matrix conditioning.')
+ 
+-    # Calculate frequencies in Hz from eigenvalues (λ = ω²)
+-    frequencies = np.sqrt(eigenvalues) / (2 * np.pi)
++    # Calculate undamped angular frequencies (rad/s) and natural frequencies (Hz)
++    omegas = np.sqrt(eigenvalues)
++    undamped_frequencies = omegas / (2 * np.pi)
++    self.undamped_frequencies = undamped_frequencies
++    self.frequencies = undamped_frequencies
++
++    # Apply Rayleigh Damping if activated
++    if damped:
++        if log:
++            print('- Calculating Rayleigh damping and damped frequencies')
++
++        m1, m2 = damping_modes
++        if m1 < 1 or m2 < 1 or m1 > num_modes or m2 > num_modes or m1 == m2:
++            raise ValueError(f'`damping_modes` must contain two distinct mode numbers between 1 and {num_modes}.')
++
++        # Call your existing method to compute self.damping_alpha and self.damping_beta
++        self.calculate_rayleigh_coeffs(
++            omega_i=omegas[m1 - 1],
++            omega_j=omegas[m2 - 1],
++            zeta_i=damping_ratios[0],
++            zeta_j=damping_ratios[1]
++        )
++
++        # Build partitioned damping matrix directly from existing M11 and K11
++        self.C11 = self.damping_alpha * M11 + self.damping_beta * K11
++
++        # Compute modal damping ratios and damped natural frequencies
++        modal_damping_ratios = 0.5 * (self.damping_alpha / omegas + self.damping_beta * omegas)
++        damping_factors = np.where(
++            modal_damping_ratios < 1.0,
++            np.sqrt(np.maximum(0.0, 1.0 - modal_damping_ratios**2)),
++            0.0
++        )
++        frequencies = undamped_frequencies * damping_factors
++        self.damping_ratios = modal_damping_ratios
++    else:
++        frequencies = undamped_frequencies
+ 
+     if log:
+         print('- Processing mode shapes')
+ 
+     for i in range(len(frequencies)):
+         mode_combo = self.load_combos[f'Mode {i + 1}']
+         D1_mode = eigenvectors[:, i].reshape(-1, 1)
+         Analysis._store_displacements(self, D1_mode, D2, D1_indices, D2_indices, mode_combo)
+ 
+     self.frequencies = frequencies
+     self.solution = 'Modal'
+ 
+     if log:
+         print(f'- Found {len(frequencies)} modes')
+-        for i, freq in enumerate(frequencies):
+-            print(f'  Mode {i + 1}: {freq:.3f} Hz')
++        if damped:
++            print(f'  Rayleigh Coefficients: alpha = {self.damping_alpha:.4f}, beta = {self.damping_beta:.6f}')
++            for i, (f_u, f_d, z) in enumerate(zip(undamped_frequencies, frequencies, modal_damping_ratios)):
++                print(f'  Mode {i + 1}: Undamped = {f_u:.3f} Hz | Damped = {f_d:.3f} Hz (zeta = {z*100:.2f}%)')
++        else:
++            for i, freq in enumerate(frequencies):
++                print(f'  Mode {i + 1}: {freq:.3f} Hz')
+         print('- Modal analysis complete')
++
++    return frequencies
